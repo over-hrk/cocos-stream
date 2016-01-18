@@ -8,6 +8,7 @@ var AsyncStream = function(){
     this.idle = true;
     
     var check  = new cc.CallFunc(function(){
+        this.idle = false;
         this.actionCnt--;
         if(this.actionCnt>0){
             var next = this.actionlist.shift();
@@ -22,13 +23,15 @@ var AsyncStream = function(){
         
         var wrapperAction = new cc.Sequence([action,check]);
         
-        if(this.idle){
-            this.idle = false;
-            target.runAction(wrapperAction);
-        }else{
-            this.actionlist.push({ target : target, action : wrapperAction });
-        }
+        this.actionlist.push({ target : target, action : wrapperAction });
         this.actionCnt++;
+        
+        if(this.idle){ 
+            // todo:
+            this.actionCnt++;
+            check.execute();
+        }
+        
         cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
     };
 };
