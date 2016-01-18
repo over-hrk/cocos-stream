@@ -1,41 +1,39 @@
 
 
-var AsyncManeger = function(){
+var AsyncStream = function(){
     
+    this.streamID = AsyncStream.prototype.streamID++;
     this.actionlist = [];
     this.actionCnt = 0;
+    this.idle = true;
     
     var check  = new cc.CallFunc(function(){
-        cc.log("checkCallback");
-        this.actionlist.shift();
         this.actionCnt--;
-        cc.log("queue size=", this.actionCnt);
         if(this.actionCnt>0){
-            var next = this.actionlist[0];
+            var next = this.actionlist.shift();
             next.target.runAction(next.action);
+        }else{
+            this.idle = true;
         }
+        cc.log("done action in streamID =", this.streamID, ", size =", this.actionCnt);
     }, this);
     
     this.runActionWrapper = function(target,action){
-        cc.log("runActionWrapper");
         
         var wrapperAction = new cc.Sequence([action,check]);
         
-        var immediate = this.actionCnt==0 ? true :false;
-        
-        this.actionlist.push({
-            target : target,
-            action : wrapperAction
-        });
-        this.actionCnt++;
-        
-        if(immediate){
+        if(this.idle){
+            this.idle = false;
             target.runAction(wrapperAction);
+        }else{
+            this.actionlist.push({ target : target, action : wrapperAction });
         }
+        this.actionCnt++;
+        cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
     };
-    
 };
 
+AsyncStream.prototype.streamID=0;
 
 var HelloWorldLayer = cc.LayerColor.extend({
     sprite:null,
@@ -89,19 +87,21 @@ var HelloWorldLayer = cc.LayerColor.extend({
         });
         this.addChild(koma_r ,0);
         
-        var mng = new AsyncManeger();
+        // stream
+        var strm1 = new AsyncStream();
+        var strm2 = new AsyncStream();
         
         var mov = new cc.MoveTo(1, cc.p(200,30));
-        // koma_r.runAction(mov);
-        
-        mng.runActionWrapper(koma_r, mov);
+        strm1.runActionWrapper(koma_r, mov);  // koma_r.runActionWrapper(mov, strm1)の形にしたい
         
         var mov2 = new cc.MoveTo(1, cc.p(100,150));
-        //koma_b.runAction(mov2);
-        mng.runActionWrapper(koma_b, mov2);
+        strm1.runActionWrapper(koma_b, mov2); // movの完了後に実行される
         
         var mov3 = new cc.MoveTo(1, cc.p(300,150));
-        mng.runActionWrapper(koma_b, mov3);
+        strm1.runActionWrapper(koma_r, mov3); // mov2の完了後に実行される
+        
+        var mov4 = new cc.MoveTo(0.5, cc.p(400,200));
+        strm2.runActionWrapper(koma_b, mov3); // すぐに実行される
         
         return true;
     }
