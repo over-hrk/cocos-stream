@@ -13,7 +13,14 @@ var AsyncStream = function(){
         cc.log("done action in streamID =", this.streamID, ", size =", this.actionCnt);
         if(this.actionCnt>0){
             var next = this.actionlist.shift();
-            next.target.runAction(next.action);
+            switch(next.label){
+                case "runAction":
+                    next.target.runAction(next.action);
+                    break;
+                default:
+                    cc.log("Invalid event lavel");
+                    break;
+            }
         }else{
             this.idle = true;
         }
@@ -23,7 +30,7 @@ var AsyncStream = function(){
         
         var wrapperAction = new cc.Sequence([action,check]);
         
-        this.actionlist.push({ target : target, action : wrapperAction });
+        this.actionlist.push({ label : "runAction", target : target, action : wrapperAction });
         this.actionCnt++;
         cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
         
