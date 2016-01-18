@@ -10,13 +10,13 @@ var AsyncStream = function(){
     var check  = new cc.CallFunc(function(){
         this.idle = false;
         this.actionCnt--;
+        cc.log("done action in streamID =", this.streamID, ", size =", this.actionCnt);
         if(this.actionCnt>0){
             var next = this.actionlist.shift();
             next.target.runAction(next.action);
         }else{
             this.idle = true;
         }
-        cc.log("done action in streamID =", this.streamID, ", size =", this.actionCnt);
     }, this);
     
     this.runActionWrapper = function(target,action){
@@ -25,14 +25,14 @@ var AsyncStream = function(){
         
         this.actionlist.push({ target : target, action : wrapperAction });
         this.actionCnt++;
+        cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
         
         if(this.idle){ 
             // todo:
             this.actionCnt++;
+            cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
             check.execute();
         }
-        
-        cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
     };
 };
 
