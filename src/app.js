@@ -20,6 +20,9 @@ var AsyncStream = function(){
                 case "runAction":
                     next.target.runAction(next.action);
                     break;
+                case "eventRecord":
+                    next.action.execute();
+                    break;
                 default:
                     cc.log("Invalid event lavel");
                     break;
@@ -44,9 +47,56 @@ var AsyncStream = function(){
             check.execute();
         }
     };
+    
+    this.eventRecordWrapper = function(event){
+        
+        var wrapperAction = new cc.CallFunc(function(){
+            event._recordAction.execute();
+            check.execute();
+        });
+        
+        this.actionlist.push({ label : "eventRecord", action : wrapperAction });
+        this.actionCnt++;
+        cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
+        
+        if(this.idle){ 
+            // todo:
+            this.actionCnt++;
+            cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
+            check.execute();
+        }
+    };
 };
 
-AsyncStream.prototype.streamID=0;
+AsyncStream.prototype = {
+    streamID : 0
+};
+
+var StreamEvent = function(){
+    var proto = StreamEvent.prototype;
+    this.eventID = proto.eventID++;
+    proto.recordedList[this.eventID] = false; 
+    
+    this._recordAction = new cc.CallFunc(function(){
+        var proto = StreamEvent.prototype;
+        if( !proto.isRecorded(this.eventID)){
+            proto.recordedList[this.eventID] = true;
+        }
+        cc.log("Record event ", proto.recordedList);
+    }, this);
+    
+    this.record = function(stream){
+        stream.eventRecordWrapper(this);
+    };
+};
+
+StreamEvent.prototype = {
+    eventID : 0,
+    recordedList : {},
+    isRecorded : function(id){
+        return !!StreamEvent.prototype.recordedList[id];
+    }
+};
 
 var HelloWorldLayer = cc.LayerColor.extend({
     sprite:null,
@@ -103,12 +153,14 @@ var HelloWorldLayer = cc.LayerColor.extend({
         // stream
         var strm1 = new AsyncStream();
         var strm2 = new AsyncStream();
+        var event1 = new StreamEvent();
         
         var mov = new cc.MoveTo(1, cc.p(200,30));
         koma_r.runActionAsync(mov, strm1);
         
         var mov2 = new cc.MoveTo(1, cc.p(100,150));
         koma_b.runActionAsync(mov2, strm1);
+        event1.record(strm1);
         
         var mov3 = new cc.MoveTo(1, cc.p(300,150));
         koma_r.runActionAsync(mov3, strm1);
