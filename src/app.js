@@ -1,4 +1,7 @@
 
+cc.Node.prototype.runActionAsync = function(action, stream){
+    stream.runActionWrapper(this,action);    
+};
 
 var AsyncStream = function(){
     
@@ -102,16 +105,16 @@ var HelloWorldLayer = cc.LayerColor.extend({
         var strm2 = new AsyncStream();
         
         var mov = new cc.MoveTo(1, cc.p(200,30));
-        strm1.runActionWrapper(koma_r, mov);  // koma_r.runActionWrapper(mov, strm1)の形にしたい
+        koma_r.runActionAsync(mov, strm1);
         
         var mov2 = new cc.MoveTo(1, cc.p(100,150));
-        strm1.runActionWrapper(koma_b, mov2); // movの完了後に実行される
+        koma_b.runActionAsync(mov2, strm1);
         
         var mov3 = new cc.MoveTo(1, cc.p(300,150));
-        strm1.runActionWrapper(koma_r, mov3); // mov2の完了後に実行される
+        koma_r.runActionAsync(mov3, strm1);
         
         var mov4 = new cc.MoveTo(0.5, cc.p(400,200));
-        strm2.runActionWrapper(koma_b, mov3); // すぐに実行される
+        koma_b.runActionAsync(mov3,strm2);
         
         return true;
     }
