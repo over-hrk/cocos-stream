@@ -92,6 +92,9 @@ var AsyncStream = function(){
         if(this.idle){ 
             // todo:
             this.actionCnt++;
+            check.execute();
+        }
+    };
 };
 
 AsyncStream.prototype = {
