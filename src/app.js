@@ -1,6 +1,6 @@
 
 cc.Node.prototype.runActionAsync = function(action, stream){
-    stream.runActionWrapper(this,action);    
+    stream.runActionWrapper(this,　action);    
 };
 
 var AsyncStream = function(){
@@ -103,42 +103,46 @@ AsyncStream.prototype = {
 
 var StreamEvent = function(){
     var proto = StreamEvent.prototype;
-    this.eventID = proto.eventID++;
+    this.eventID = proto.eventNum++;
     proto.recordedList[this.eventID] = false; 
     this.callbacks = [];
     
-    this._recordAction = new cc.CallFunc(function(){
+    this._recordAction = new cc.CallFunc(StreamEvent.prototype.recordAction, this);
+    
+    
+};
+
+StreamEvent.prototype = {
+    eventNum : 0,
+    recordedList : {},
+    isRecorded : function(id){
+        return !!StreamEvent.prototype.recordedList[id];
+    },
+    
+    recordAction : function(){
         var proto = StreamEvent.prototype;
         if( !proto.isRecorded(this.eventID)){
             proto.recordedList[this.eventID] = true;
         }
         cc.log("Record event ", proto.recordedList);
-    }, this);
+    },
     
-    this.record = function(stream){
+    record : function(stream){
         stream.eventRecordWrapper(this);
-    };
+    },
     
-    this.addCallback = function(callback){
+    addCallback : function(callback){
         this.callbacks.push(callback);
-    };
+    },
     
-    this.runCallbacks = function(){
+    runCallbacks : function(){
         for(var key in this.callbacks ){
             this.callbacks[key]();
         }
-    };
+    },
     
-    this.wait = function(stream){
+    wait : function(stream){
         stream.eventWaitWrapper(this);
-    };
-};
-
-StreamEvent.prototype = {
-    eventID : 0,
-    recordedList : {},
-    isRecorded : function(id){
-        return !!StreamEvent.prototype.recordedList[id];
     }
 };
 
