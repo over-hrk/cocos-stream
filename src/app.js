@@ -4,13 +4,17 @@ cc.Node.prototype.runActionAsync = function(action, stream){
 };
 
 var AsyncStream = function(){
-    
-    this.streamID = AsyncStream.prototype.streamID++;
+    this.streamID = AsyncStream.prototype.streamNum++;
     this.actionlist = [];
     this.actionCnt = 0;
     this.idle = true;
-    
-    var check  = new cc.CallFunc(function(){
+    this.check = new cc.CallFunc(AsyncStream.prototype._check, this);
+};
+
+AsyncStream.prototype = {
+    streamNum : 0,
+        
+    _check : function(){
         this.idle = false;
         this.actionCnt--;
         cc.log("done action in streamID =", this.streamID, ", size =", this.actionCnt);
@@ -34,11 +38,11 @@ var AsyncStream = function(){
         }else{
             this.idle = true;
         }
-    }, this);
+    },
     
-    this.runActionWrapper = function(target,action){
+    runActionWrapper : function(target,action){
         
-        var wrapperAction = new cc.Sequence([action,check]);
+        var wrapperAction = new cc.Sequence([action,this.check]);
         
         this.actionlist.push({ label : "runAction", target : target, action : wrapperAction });
         this.actionCnt++;
@@ -48,18 +52,18 @@ var AsyncStream = function(){
             // todo:
             this.actionCnt++;
             cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
-            check.execute();
+            this.check.execute();
         }
-    };
+    },
     
-    this.eventRecordWrapper = function(event){
+    eventRecordWrapper : function(event){
         
         var wrapperAction = new cc.CallFunc(function(){
             event._recordAction.execute();
             if( event.callbacks.length > 0 ){
                 event.runCallbacks();
             }
-            check.execute();
+            this.check.execute();
         }, this);
         
         this.actionlist.push({ label : "eventRecord", action : wrapperAction });
@@ -70,18 +74,18 @@ var AsyncStream = function(){
             // todo:
             this.actionCnt++;
             cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
-            check.execute();
+            this.check.execute();
         }
-    };
+    },
     
-    this.eventWaitWrapper = function(event){
-        
+    eventWaitWrapper : function(event){
+        var self = this;
         var wrapperAction = new cc.CallFunc(function(){
             if( StreamEvent.prototype.isRecorded(event.eventID) ){
-                check.execute();
+                self.check.execute();
             }else{
                 event.addCallback(function(){
-                    check.execute();
+                    self.check.execute();
                 });
             }
         });
@@ -92,13 +96,9 @@ var AsyncStream = function(){
         if(this.idle){ 
             // todo:
             this.actionCnt++;
-            check.execute();
+            this.check.execute();
         }
-    };
-};
-
-AsyncStream.prototype = {
-    streamID : 0
+    }
 };
 
 var StreamEvent = function(){
@@ -225,6 +225,9 @@ var HelloWorldLayer = cc.LayerColor.extend({
         event1.wait(strm3); // event1がRecordされるのを待つ
         event2.wait(strm3); // event2がRecordされるのを待つ
         koma_b.runActionAsync(jumpMotion,strm3);
+        
+        var jumpMotion2 = cc.JumpBy.create(1, cc.p(30,-50), 200,1);
+        koma_b.runActionAsync(jumpMotion2,strm3);
         
         return true;
     }
