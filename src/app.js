@@ -1,4 +1,3 @@
-
 cc.Node.prototype.runActionAsync = function(action, stream){
     stream.runActionWrapper(this,　action);    
 };
@@ -18,7 +17,7 @@ AsyncStream.prototype = {
         this.idle = false;
         this.actionCnt--;
         cc.log("done action in streamID =", this.streamID, ", size =", this.actionCnt);
-        if(this.actionCnt>0){
+        if(this.actionCnt > 0){
             var next = this.actionlist.shift();
             switch(next.label){
                 case "runAction":
@@ -49,7 +48,6 @@ AsyncStream.prototype = {
         cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
         cc.log("Schedule action=", wrapperAction.__instanceId, "(sream=", this.streamID,")");
         if(this.idle){ 
-            // todo:
             this.actionCnt++;
             cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
             this.check.execute();
@@ -71,14 +69,13 @@ AsyncStream.prototype = {
         cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
         
         if(this.idle){ 
-            // todo:
             this.actionCnt++;
             cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
             this.check.execute();
         }
     },
     
-    eventWaitWrapper : function(event){
+    waitEvent : function(event){
         var self = this;
         var wrapperAction = new cc.CallFunc(function(){
             if( StreamEvent.prototype.isRecorded(event.eventID) ){
@@ -93,8 +90,7 @@ AsyncStream.prototype = {
         this.actionlist.push({ label : "eventWait", action : wrapperAction });
         this.actionCnt++;
         
-        if(this.idle){ 
-            // todo:
+        if(this.idle){
             this.actionCnt++;
             this.check.execute();
         }
@@ -103,18 +99,17 @@ AsyncStream.prototype = {
 
 var StreamEvent = function(){
     var proto = StreamEvent.prototype;
-    this.eventID = proto.eventNum++;
     proto.recordedList[this.eventID] = false; 
-    this.callbacks = [];
     
-    this._recordAction = new cc.CallFunc(StreamEvent.prototype.recordAction, this);
-    
-    
+    this.eventID        = proto.eventNum++;
+    this.callbacks      = [];
+    this._recordAction  = new cc.CallFunc(proto.recordAction, this);
 };
 
 StreamEvent.prototype = {
     eventNum : 0,
     recordedList : {},
+    
     isRecorded : function(id){
         return !!StreamEvent.prototype.recordedList[id];
     },
@@ -139,10 +134,6 @@ StreamEvent.prototype = {
         for(var key in this.callbacks ){
             this.callbacks[key]();
         }
-    },
-    
-    wait : function(stream){
-        stream.eventWaitWrapper(this);
     }
 };
 
@@ -226,8 +217,8 @@ var HelloWorldLayer = cc.LayerColor.extend({
         jumps[2] = cc.JumpBy.create(0.10, cc.p(10,  0),  5,1);
         jumps[3] = cc.JumpBy.create(0.10, cc.p( 5,  0),  2,1);
         var jumpMotion = cc.Sequence.create(jumps);
-        event1.wait(strm3); // event1がRecordされるのを待つ
-        event2.wait(strm3); // event2がRecordされるのを待つ
+        strm3.waitEvent(event1); // event1がRecordされるのを待つ
+        strm3.waitEvent(event2); // event2がRecordされるのを待つ
         koma_b.runActionAsync(jumpMotion,strm3);
         
         var jumpMotion2 = cc.JumpBy.create(1, cc.p(30,-50), 200,1);
