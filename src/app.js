@@ -16,26 +16,27 @@ AsyncStream.prototype = {
     _check : function(){
         this.idle = false;
         this.actionCnt--;
-        cc.log("done action in streamID =", this.streamID, ", size =", this.actionCnt);
-        if(this.actionCnt > 0){
-            var next = this.actionlist.shift();
-            switch(next.label){
-                case "runAction":
-                    cc.log("Exec action=" ,next.action.__instanceId, "(sream=", this.streamID,")");
-                    next.target.runAction(next.action);
-                    break;
-                case "eventRecord":
-                    next.action.execute();
-                    break;
-                case "eventWait":
-                    next.action.execute();
-                    break;
-                default:
-                    cc.log("Invalid event lavel");
-                    break;
-            }
-        }else{
+        
+        if( this.actionCnt == 0 ){
             this.idle = true;
+            return; 
+        }
+        
+        var next = this.actionlist.shift();
+        switch(next.label){
+            case "runAction":
+                cc.log("Exec action=" ,next.action.__instanceId, "(sream=", this.streamID,")");
+                next.target.runAction(next.action);
+                break;
+            case "eventRecord":
+                next.action.execute();
+                break;
+            case "eventWait":
+                next.action.execute();
+                break;
+            default:
+                cc.log("Invalid event lavel");
+                break;
         }
     },
     
@@ -45,11 +46,9 @@ AsyncStream.prototype = {
         
         this.actionlist.push({ label : "runAction", target : target, action : wrapperAction });
         this.actionCnt++;
-        cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
         cc.log("Schedule action=", wrapperAction.__instanceId, "(sream=", this.streamID,")");
         if(this.idle){ 
             this.actionCnt++;
-            cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
             this.check.execute();
         }
     },
@@ -66,11 +65,9 @@ AsyncStream.prototype = {
         
         this.actionlist.push({ label : "eventRecord", action : wrapperAction });
         this.actionCnt++;
-        cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
         
         if(this.idle){ 
             this.actionCnt++;
-            cc.log("Add action to streamID =", this.streamID, ", size =", this.actionCnt);
             this.check.execute();
         }
     },
