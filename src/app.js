@@ -1,5 +1,9 @@
 cc.Node.prototype.runActionAsync = function(action, stream){
-    stream.runActionWrapper(this,　action);    
+    if(stream instanceof AsyncStream){
+        stream.scheduleRunAction(this,　action);   
+    }else{
+        this.runAction(action);
+    } 
 };
 
 var AsyncStream = function(){
@@ -13,6 +17,11 @@ var AsyncStream = function(){
 AsyncStream.prototype = {
     streamNum : 0,
         
+    _start : function(){
+        this.actionCnt++;
+        this.check.execute();
+    },
+    
     _check : function(){
         this.idle = false;
         this.actionCnt--;
@@ -25,7 +34,7 @@ AsyncStream.prototype = {
         var next = this.actionlist.shift();
         switch(next.label){
             case "runAction":
-                cc.log("Exec action=" ,next.action.__instanceId, "(sream=", this.streamID,")");
+                cc.log("Exec action =" ,next.action.__instanceId, "( stream =", this.streamID,")");
                 next.target.runAction(next.action);
                 break;
             case "eventRecord":
@@ -40,23 +49,23 @@ AsyncStream.prototype = {
         }
     },
     
-    runActionWrapper : function(target,action){
+    scheduleRunAction : function(target,action){
         
         var wrapperAction = new cc.Sequence([action,this.check]);
         
         this.actionlist.push({ label : "runAction", target : target, action : wrapperAction });
         this.actionCnt++;
-        cc.log("Schedule action=", wrapperAction.__instanceId, "(sream=", this.streamID,")");
+        cc.log("Schedule action =", wrapperAction.__instanceId, "( stream =", this.streamID,")");
         if(this.idle){ 
-            this.actionCnt++;
-            this.check.execute();
+            this._start();
         }
     },
     
-    eventRecordWrapper : function(event){
+    scheduleEventRecord : function(event){
         
         var wrapperAction = new cc.CallFunc(function(){
-            event._recordAction.execute();
+            cc.log("Exec recordEvent =" , event._eventID, "( stream =", this.streamID,")");
+            event.recordAction.execute();
             if( event.callbacks.length > 0 ){
                 event.runCallbacks();
             }
@@ -65,71 +74,70 @@ AsyncStream.prototype = {
         
         this.actionlist.push({ label : "eventRecord", action : wrapperAction });
         this.actionCnt++;
-        
+        cc.log("Schedule eventRecord =", event._eventID, "( stream =", this.streamID,")");
         if(this.idle){ 
-            this.actionCnt++;
-            this.check.execute();
+            this._start();
         }
     },
     
     waitEvent : function(event){
         var self = this;
         var wrapperAction = new cc.CallFunc(function(){
-            if( StreamEvent.prototype.isRecorded(event.eventID) ){
+            if( StreamEvent.prototype.isRecorded(event) ){
                 self.check.execute();
             }else{
                 event.addCallback(function(){
-                    self.check.execute();
-                });
+                    this.check.execute();
+                }, self);
             }
         });
         
         this.actionlist.push({ label : "eventWait", action : wrapperAction });
         this.actionCnt++;
-        
+        cc.log("Schedule waitEvent =", event._eventID, "( stream =", this.streamID,")");
         if(this.idle){
-            this.actionCnt++;
-            this.check.execute();
+            this._start();
         }
     }
 };
 
 var StreamEvent = function(){
     var proto = StreamEvent.prototype;
-    proto.recordedList[this.eventID] = false; 
     
-    this.eventID        = proto.eventNum++;
+    this._eventID       = proto.eventNum++;
     this.callbacks      = [];
-    this._recordAction  = new cc.CallFunc(proto.recordAction, this);
+    this.recordAction  = new cc.CallFunc(proto._recordAction, this);
+    
+    proto.recordedList[this._eventID] = false; 
 };
 
 StreamEvent.prototype = {
     eventNum : 0,
     recordedList : {},
     
-    isRecorded : function(id){
-        return !!StreamEvent.prototype.recordedList[id];
+    isRecorded : function(event){
+        return !!StreamEvent.prototype.recordedList[event._eventID];
     },
     
-    recordAction : function(){
+    _recordAction : function(){
         var proto = StreamEvent.prototype;
-        if( !proto.isRecorded(this.eventID)){
-            proto.recordedList[this.eventID] = true;
+        if( !proto.isRecorded(this)){
+            proto.recordedList[this._eventID] = true;
         }
-        cc.log("Record event ", proto.recordedList);
     },
     
     record : function(stream){
-        stream.eventRecordWrapper(this);
+        stream.scheduleEventRecord(this);
     },
     
-    addCallback : function(callback){
-        this.callbacks.push(callback);
+    addCallback : function(callback, target){
+        this.callbacks.push({func:callback, target:target});
     },
     
     runCallbacks : function(){
         for(var key in this.callbacks ){
-            this.callbacks[key]();
+            var callback = this.callbacks[key];
+            callback.func.call(callback.target);
         }
     }
 };
