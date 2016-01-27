@@ -1,10 +1,12 @@
 cc.Node.prototype.runActionAsync = function(action, stream){
-    if(stream instanceof AsyncStream){
+    if(stream instanceof asyncAction.AsyncStream){
         stream.scheduleRunAction(this,　action);   
     }else{
         this.runAction(action);
     } 
 };
+
+var asyncAction = (function(){
 
 var AsyncStream = function(){
     this.streamID = AsyncStream.prototype.streamNum++;
@@ -142,6 +144,12 @@ StreamEvent.prototype = {
     }
 };
 
+    return {
+        AsyncStream : AsyncStream,
+        StreamEvent : StreamEvent
+    }
+}());
+
 var HelloWorldLayer = cc.LayerColor.extend({
     sprite:null,
     ctor:function () {
@@ -195,11 +203,11 @@ var HelloWorldLayer = cc.LayerColor.extend({
         this.addChild(koma_r ,0);
         
         // stream
-        var strm1 = new AsyncStream();
-        var strm2 = new AsyncStream();
-        var strm3 = new AsyncStream();
-        var event1 = new StreamEvent();
-        var event2 = new StreamEvent();
+        var strm1 = new asyncAction.AsyncStream();
+        var strm2 = new asyncAction.AsyncStream();
+        var strm3 = new asyncAction.AsyncStream();
+        var event1 = new asyncAction.StreamEvent();
+        var event2 = new asyncAction.StreamEvent();
         
         var mov = new cc.MoveTo(1, cc.p(200,30));
         koma_r.runActionAsync(mov, strm1);
